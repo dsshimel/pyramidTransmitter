@@ -4,9 +4,6 @@
 // 2013-8-16
 
 public class DNA extends CanvasRoutine {
-  GenerateColor genRandomColor = new GenRandomColor();
-  boolean overrideColor = false;
-
   private int _w;		// grid width in number of cells
   private int _h;		// grid height in number of cells
   private Helix[] _helices;
@@ -28,22 +25,24 @@ public class DNA extends CanvasRoutine {
     private double _wavelength;
     private boolean _isDisorient;
     private boolean _sameStrands;
+    private int _panelNum;
     
-    public Helix(int spacing, double wavelength, boolean sameStrands) {
+    public Helix(int spacing, double wavelength, boolean sameStrands, int panelNum) {
       _sameStrands = sameStrands;
       
       setLeftAndRightCurColors();
-      _barsCur = genRandomColor.get();
+      _barsCur = getRandomColor();
 
       setLeftAndRightNextColors();
-      _barsNext = genRandomColor.get();
+      _barsNext = getRandomColor();
       
       _spacing = spacing;
       _wavelength = wavelength;
       _isDisorient = false;
+      _panelNum = panelNum;
     }
   
-    public Helix(color strandsColor, color barsColor, int spacing, double wavelength) {
+    public Helix(color strandsColor, color barsColor, int spacing, double wavelength, int panelNum) {
       _sameStrands = true;
       _leftCur = strandsColor;
       _rightCur = strandsColor;
@@ -56,28 +55,37 @@ public class DNA extends CanvasRoutine {
       _spacing = spacing;
       _wavelength = wavelength;
       _isDisorient = true;
+      _panelNum = panelNum;
      }
     
     private void setLeftAndRightCurColors() {
-      _leftCur = genRandomColor.get();
+      _leftCur = getRandomColor();
       if(_sameStrands) {
         _rightCur = _leftCur;
       }
       else {
-        _rightCur = genRandomColor.get();
+        _rightCur = getRandomColor();
       }
     }
   
     private void setLeftAndRightNextColors() {
-      _leftNext = genRandomColor.get();
+      _leftNext = getRandomColor();
       if(_sameStrands) {
         _rightNext = _leftNext;
       }
       else {
-        _rightNext = genRandomColor.get();
+        _rightNext = getRandomColor();
       }
     }
-   
+    
+    private color getRandomColor() {
+      return color(getRandomInt(256), getRandomInt(256), getRandomInt(256));
+    }
+    
+    private int getRandomInt(int max) {
+      return (int) Math.floor(Math.random() * max);
+    }
+    
     public double getLeftX(int time, int offset, int panelNum) {
       double amplitude = (_helixWidth - 1) / 2.0;
       int panelCorrection = panelNum * _helixWidth;
@@ -93,17 +101,37 @@ public class DNA extends CanvasRoutine {
       return (_helixWidth * (panelNum + 1)) - getLeftX(time, offset, panelNum) + (_helixWidth * panelNum) - 1;
     }
     
-    private int getLeftColorOffset() {
-      
-      return (int) Math.round(_leftCur - (_leftCur - _leftNext) * (((double) _offset) / _h));
-    }
-    
-    private int getRightColorOffset() {
-      return (int) Math.round(_rightCur - (_rightCur - _rightNext) * (((double) _offset) / _h));
-    }
-    
-    private int getBarsColorOffset() {
-      return (int) Math.round(_barsCur - (_barsCur - _barsNext) * (((double) _offset) / _h));
+    private int calculateColor(int cur, int next) {
+      double parameter = (double) _offset / _h;
+      // bend the values closer to or further from 0 and 1
+      switch(_panelNum) {
+        case 0:
+          parameter = Math.pow(parameter, 2.0);
+          break;
+        case 7:
+          parameter = Math.pow(parameter, 2.0);
+          break;
+        case 1:
+          parameter = Math.pow(parameter, 1.0);
+          break;
+        case 6:
+          parameter = Math.pow(parameter, 1.0);
+          break;
+        case 2:
+          parameter = Math.pow(parameter, 0.5);
+          break;
+        case 5:
+          parameter = Math.pow(parameter, 0.5);
+          break;
+        // make these pornj and disorientOrange most of the time
+        case 3:
+          parameter = Math.pow(parameter, 4.0);
+          break;
+        case 4:
+          parameter = Math.pow(parameter, 4.0);
+          break;          
+      }
+      return (int) Math.round(cur - (cur - next) * parameter);
     }
     
     public color getLeftColor() { 
@@ -114,9 +142,9 @@ public class DNA extends CanvasRoutine {
       lnRed = (_leftNext >> 16) & 0xFF;
       lnGreen = (_leftNext >> 8) & 0xFF;
       lnBlue = (_leftNext >> 0) & 0xFF;
-      int r = (int) Math.round(lcRed - (lcRed - lnRed) * (((double) _offset) / _h));
-      int g = (int) Math.round(lcGreen - (lcGreen - lnGreen) * (((double) _offset) / _h));
-      int b = (int) Math.round(lcBlue - (lcBlue - lnBlue) * (((double) _offset) / _h));
+      int r = calculateColor(lcRed, lnRed);
+      int g = calculateColor(lcGreen, lnGreen);
+      int b = calculateColor(lcBlue, lnBlue);
       return color(r, g, b);
     }
     public color getRightColor() { 
@@ -127,9 +155,9 @@ public class DNA extends CanvasRoutine {
       rnRed = (_rightNext >> 16) & 0xFF;
       rnGreen = (_rightNext >> 8) & 0xFF;
       rnBlue = (_rightNext >> 0) & 0xFF;
-      int r = (int) Math.round(rcRed - (rcRed - rnRed) * (((double) _offset) / _h));
-      int g = (int) Math.round(rcGreen - (rcGreen - rnGreen) * (((double) _offset) / _h));
-      int b = (int) Math.round(rcBlue - (rcBlue - rnBlue) * (((double) _offset) / _h));
+      int r = calculateColor(rcRed, rnRed);
+      int g = calculateColor(rcGreen, rnGreen);
+      int b = calculateColor(rcBlue, rnBlue);
       return color(r, g, b);
     }
     public color getBarsColor() { 
@@ -140,13 +168,13 @@ public class DNA extends CanvasRoutine {
       bnRed = (_barsNext >> 16) & 0xFF;
       bnGreen = (_barsNext >> 8) & 0xFF;
       bnBlue = (_barsNext >> 0) & 0xFF;
-      int r = (int) Math.round(bcRed - (bcRed - bnRed) * (((double) _offset) / _h));
-      int g = (int) Math.round(bcGreen - (bcGreen - bnGreen) * (((double) _offset) / _h));
-      int b = (int) Math.round(bcBlue - (bcBlue - bnBlue) * (((double) _offset) / _h));
+      int r = calculateColor(bcRed, bnRed);
+      int g = calculateColor(bcGreen, bnGreen);
+      int b = calculateColor(bcBlue, bnBlue);
       return color(r, g, b);
     }
     public int getSpacing() { return _spacing; }
-    public boolean drawBars(int index) { return (index + _barsMovementCoeff*_offset) % _spacing == 0; }
+    public boolean drawBars(int index) { return (index + _barsMovementCoeff*(_offset + 15*_panelNum)) % _spacing == 0; }
     
     public void changeColors() {
       _leftCur = _leftNext;
@@ -176,11 +204,6 @@ public class DNA extends CanvasRoutine {
     setModulus();
     
     makeHelices();
-  }
-
-  void reinit() {
-    setModulus();
-    makeHelices(); 
   }
  
  private void setModulus() {
@@ -212,15 +235,14 @@ public class DNA extends CanvasRoutine {
      }
      int spacingOffset = 3*i + 2;
      boolean sameStrands = i % 2 == 1;
-
-      if(i == _panels / 2 - 1 && overrideColor == false) { // the center panel(s)
+      if(i == _panels / 2 - 1) { // the center panel(s)
          System.out.println(i + ", " + (_panels - i - 1));
-        _helices[i] = new Helix(pornj, disorientOrange, spacingOffset, wavelength);
-        _helices[_panels - i - 1] = new Helix(disorientOrange, pornj, spacingOffset, wavelength);
+        _helices[i] = new Helix(pornj, disorientOrange, spacingOffset, wavelength, i);
+        _helices[_panels - i - 1] = new Helix(disorientOrange, pornj, spacingOffset, wavelength, _panels - i - 1);
       }
       else {
-        _helices[i] = new Helix(spacingOffset, wavelength, sameStrands);
-        _helices[_panels - i - 1] = new Helix(spacingOffset, wavelength, sameStrands);
+        _helices[i] = new Helix(spacingOffset, wavelength, sameStrands, i);
+        _helices[_panels - i - 1] = new Helix(spacingOffset, wavelength, sameStrands, _panels - i - 1);
       }
     }
  } 
@@ -243,7 +265,7 @@ public class DNA extends CanvasRoutine {
       _offset = 0;
       changeHelixColors();
       setModulus();
-      _barsMovementCoeff = (int)(Math.floor(Math.random() * 12) - 6);
+      _barsMovementCoeff = (int)(Math.floor(Math.random() * 8) - 4);
     }
   }
   
@@ -303,7 +325,9 @@ class DNAPlayer extends SetList {
     int panels = 8;
     DNA dna = new DNA(64, 210, panels);
 
-
+//    setCanvas(canvas1, dna);
+//    setCanvas(canvas1, dna);
+    //setCanvas(canvas3, dna);
     setCanvas(canvas2, dna);
     wait(60.0);
   }
